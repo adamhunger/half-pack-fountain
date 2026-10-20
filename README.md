@@ -10,6 +10,8 @@ to `pack2x16float` / `unpack2x16float` in WGSL and `packHalf2x16` /
 `unpackHalf2x16` in GLSL ES 3.0, so the same code runs on the WebGPU backend and
 on the WebGL 2 fallback.
 
+![The fountain at 200,000 particles on the WebGPU backend, with the cursor in the stream pushing particles aside](docs/screenshot.png)
+
 ## Run it
 
 There is no build step. three.js 0.186.1 loads from cdn.jsdelivr.net, so you
@@ -19,6 +21,7 @@ Serve the folder over `localhost`, because WebGPU only runs in a secure context
 and ES modules don't load reliably from `file://`. Any static server works:
 
 ```sh
+git clone https://github.com/adamhunger/half-pack-fountain.git
 cd half-pack-fountain
 python3 -m http.server 8000
 # or: npx serve .
@@ -54,6 +57,7 @@ serve over HTTPS (for example with a tunnel such as `cloudflared` or `ngrok`).
 | `index.html` | Page markup, plus a small inline script that shows load and runtime errors on the stage |
 | `style.css` | Light and dark themes via CSS custom properties |
 | `main.js` | Renderer setup, TSL compute shaders, materials, GPU readback, UI wiring |
+| `docs/screenshot.png` | The screenshot above |
 
 ## How the packing works (`main.js`)
 
@@ -84,3 +88,9 @@ To pin a different three.js version, change the import URL at the top of `main.j
 Verified in Chrome on macOS, on the WebGPU backend: the scene renders and the GPU
 readback decodes correctly. Not yet verified by hand: the storage-mode, backend and
 count controls, the WebGL 2 path, and real-world frame rates.
+
+## License
+
+[MIT](LICENSE). three.js, loaded from the CDN, is also MIT. The Schibsted Grotesk
+and JetBrains Mono fonts load from Google Fonts under the SIL Open Font License
+and aren't included in this repo.
