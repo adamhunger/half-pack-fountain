@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Half-Pack Fountain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Half-Pack Fountain</h1>
+    <p>Each particle's velocity is two 16-bit floats packed into one <code>u32</code> with TSL's <code>packHalf2x16</code>. The compute shader unpacks it, does the physics in f32, and packs it again every frame. This needs no <code>shader-f16</code> and runs on the WebGL 2 fallback too.</p>
+  </header>
+
+  <div class="grid">
+    <section>
+      <div class="stage" id="stage">
+        <div class="hud"><span id="hudBackend">starting…</span><span id="hudFps">— fps</span></div>
+        <div class="hint">Move the pointer over the fountain to push particles</div>
+      </div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Velocity storage">
+          <button id="modePacked" aria-pressed="true">Packed halves · u32</button>
+          <button id="modeF32" aria-pressed="false">Full f32 · vec2</button>
+        </div>
+        <div class="seg" role="group" aria-label="Backend">
+          <button id="beAuto" aria-pressed="true">WebGPU</button>
+          <button id="beGL" aria-pressed="false">Force WebGL 2</button>
+        </div>
+        <label class="ctl" for="count">Particles
+          <select id="count">
+            <option value="50000">50,000</option>
+            <option value="200000" selected>200,000</option>
+            <option value="500000">500,000</option>
+            <option value="1000000">1,000,000</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <p class="eyebrow">This device</p>
+        <dl>
+          <dt>Backend</dt><dd id="dBackend">—</dd>
+          <dt><code>shader-f16</code></dt><dd id="dF16">—</dd>
+          <dt>Needed here?</dt><dd><span class="pill ok">No</span></dd>
+        </dl>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">Velocity buffer</p>
+        <div class="mem">
+          <div class="row"><div class="lbl"><span>Packed <code>uint</code></span><b id="memPacked">—</b></div><div class="bar"><i id="barPacked" style="width:50%"></i></div></div>
+          <div class="row"><div class="lbl"><span>Full <code>vec2</code> f32</span><b id="memF32">—</b></div><div class="bar"><i style="width:100%"></i></div></div>
+        </div>
+        <p class="note">Half the bytes read and written per particle per frame. Positions stay in f32 in both modes.</p>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">Particle <span id="pIdx">#0</span>, read back from the GPU</p>
+        <div class="bits" id="bits"><span class="note">Waiting for first readback…</span></div>
+        <div class="legend"><span><i class="b-s">s</i> sign</span><span><i class="b-e">e</i> exponent (5)</span><span><i class="b-m">m</i> mantissa (10)</span></div>
+        <button class="btn" id="nextP">Inspect another particle</button>
+      </div>
+    </aside>
+  </div>
+
+  <section>
+    <h2>The TSL that runs it</h2>
+    <div class="code"><pre><span class="k">const</span> velocities = instancedArray( COUNT, <span class="k">'uint'</span> );   <span class="c">// two halves per element</span>
+
+<span class="k">const</span> update = Fn( () =&gt; {
+  <span class="k">const</span> packed = velocities.element( instanceIndex );
+  <span class="k">const</span> vel = unpackHalf2x16( packed ).toVar();      <span class="c">// vec2, f32 math from here</span>
+
+  vel.assign( vel.add( vec2( 0, gravity.negate().mul( dt ) ) ) );
+  <span class="c">// … pointer push, damping, move position, respawn …</span>
+
+  packed.assign( packHalf2x16( vel ) );               <span class="c">// back to 16 + 16 bits</span>
+} )().compute( COUNT );
+
+<span class="c">// material reads the same buffer</span>
+material.colorNode = speedColor( unpackHalf2x16( velocities.element( instanceIndex ) ).length() );</pre></div>
+  </section>
+</div>
+
+<script>
+// Show load and runtime errors on the stage itself, since the viewer hides the console.
+window.__showErr = function ( msg ) {
+  var st = document.getElementById( 'stage' ); if ( ! st || st.querySelector( '.fail' ) ) return;
+  var d = document.createElement( 'div' ); d.className = 'fail'; d.textContent = msg; st.appendChild( d );
+  var h = document.getElementById( 'hudBackend' ); if ( h ) h.textContent = 'error';
+};
+window.addEventListener( 'error', function ( e ) { window.__showErr( 'Error: ' + ( e.message || e ) ); } );
+window.addEventListener( 'unhandledrejection', function ( e ) { window.__showErr( 'Error: ' + ( e.reason && e.reason.message || e.reason ) ); } );
+setTimeout( function () { if ( ! window.__booted ) window.__showErr( 'three.js did not load from cdn.jsdelivr.net. Check your connection and reload.' ); }, 15000 );
+</script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
